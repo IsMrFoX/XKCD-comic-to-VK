@@ -16,9 +16,9 @@ def main():
     response.raise_for_status()
     data = response.json()
     total_comic_pages = data['num']
-    page_comic = randint(1, total_comic_pages)
+    page_comic_num = randint(1, total_comic_pages)
 
-    url = url_template.format(page_comic)
+    url = url_template.format(page_comic_num)
     response = requests.get(url)
     response.raise_for_status()
     data = response.json()
