@@ -4,6 +4,7 @@ from random import randint
 from dotenv import load_dotenv
 import json
 
+
 def download_random_comic():
     """
     Загружает случайный комикс из веб-комикса XKCD.
