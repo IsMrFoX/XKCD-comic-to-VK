@@ -2,9 +2,9 @@ import requests
 import os
 from random import randint
 from dotenv import load_dotenv
+import json
 
-
-def download_random_comic(url_template):
+def download_random_comic():
     """
     Загружает случайный комикс из веб-комикса XKCD.
 
@@ -14,9 +14,11 @@ def download_random_comic(url_template):
     Возвращает:
     Имя файла изображения комикса и его описание.
     """
+    url_template = 'https://xkcd.com/{}/info.0.json'
     response = requests.get('https://xkcd.com/info.0.json')
     response.raise_for_status()
     comic_file = response.json()
+    check_vk_api_response(comic_file)
     total_comic_pages = comic_file['num']
     page_comic_num = randint(1, total_comic_pages)
 
@@ -24,6 +26,7 @@ def download_random_comic(url_template):
     response = requests.get(url)
     response.raise_for_status()
     comic_file = response.json()
+    check_vk_api_response(comic_file)
     img_url = comic_file['img']
     comment = comic_file['alt']
     filename = os.path.split(img_url)[1]
@@ -54,6 +57,7 @@ def upload_image_to_vk_server(filename, comment, vk_access_token, vk_api_version
     response = requests.get(url)
     response.raise_for_status()
     upload_response = response.json()
+    check_vk_api_response(upload_response)
     upload_url = upload_response['response']['upload_url']
 
     with open(f'{filename}', 'rb') as file:
@@ -64,6 +68,7 @@ def upload_image_to_vk_server(filename, comment, vk_access_token, vk_api_version
         response = requests.post(upload_url, files=files)
     response.raise_for_status()
     upload_response = response.json()
+    check_vk_api_response(upload_response)
     server, photo, _hash = upload_response['server'], upload_response['photo'], upload_response['hash']
 
     url = f'https://api.vk.com/method/photos.saveWallPhoto'
@@ -77,9 +82,9 @@ def upload_image_to_vk_server(filename, comment, vk_access_token, vk_api_version
     response = requests.post(url, params=params)
     response.raise_for_status()
     upload_response = response.json()
+    check_vk_api_response(upload_response)
     photo_id = upload_response['response'][0]['id']
     owner_id = upload_response['response'][0]['owner_id']
-
     return owner_id, photo_id
 
 
@@ -110,6 +115,7 @@ def post_comic_to_vk_wall(owner_id, photo_id, comment, vk_access_token, vk_group
 
     response = requests.post('https://api.vk.com/method/wall.post', params=params)
     response.raise_for_status()
+    check_vk_api_response(response.json())
 
     return response.json()
 
@@ -132,15 +138,31 @@ def print_is_post_successful(post_response):
         print(f'Пост успешно опубликован, id = {post_id}')
 
 
+def check_vk_api_response(response):
+    """
+    Проверяет ответ от VK API на корректность.
+
+    Аргументы:
+    response -- ответ от VK API в формате HTTPResponse.
+
+    Возвращает:
+    Генерирует исключение, если есть ошибка в запросе.
+    """
+    try:
+        if 'error' in response:
+            raise ValueError(f"Ошибка VK API: {response['error']['error_msg']}")
+    except (requests.exceptions.RequestException, ValueError) as error:
+        raise ValueError(f"Ошибка проверки ответа VK API: {error}")
+
+
 def main():
     load_dotenv()
 
-    url_template = 'https://xkcd.com/{}/info.0.json'
     vk_access_token = os.environ['VK_ACCESS_TOKEN']
     vk_group_id = os.environ['VK_GROUP_ID']
     vk_api_version = '5.131'
 
-    filename, comment = download_random_comic(url_template)
+    filename, comment = download_random_comic()
     try:
         owner_id, photo_id = upload_image_to_vk_server(filename, comment, vk_access_token, vk_api_version)
     except Exception as error:
