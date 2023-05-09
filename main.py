@@ -2,7 +2,6 @@ import requests
 import os
 from random import randint
 from dotenv import load_dotenv
-import json
 
 
 def download_random_comic():
